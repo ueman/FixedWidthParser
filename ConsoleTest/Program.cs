@@ -8,16 +8,15 @@ namespace ConsoleTest
     {
         public static string[] test = new string[]
         {
-            "123456734,6",
-            "76543210.23",
-            "ab123cd0,34"
+            "123456734.6",
+            "76543210.27",
+            "ab123cd0.34"
         };
         
         
         public static void Main(string[] args)
         {
             var list = SimpleFixedWidthParser.ParseStringArray<TestClass>(test);
-            
         }
     }
     

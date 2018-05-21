@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using FixedWidthParser.Converters;
 using FixedWidthParser.Extensions;
 
@@ -28,23 +30,31 @@ namespace FixedWidthParser
             
             var list = new List<T>();
             var props = typeof(T).GetFixedWidthAttributedProperties();
+            var propertyInfos = props as PropertyInfo[] ?? props.ToArray();
+            var minStringLength = Utils.CheckMinStringWidth(propertyInfos);
             
             foreach (var line in lines)
             {
+                // Check if the string has the minimal required length
+                if (line.Length < minStringLength)
+                {
+                    // if it is too short skip this line because we can not
+                    // successfully parse the line
+                    continue;
+                }
+                
                 var e = new T();
-                foreach (var propertyInfo in props)
+                foreach (var propertyInfo in propertyInfos)
                 {
                     var attribute = propertyInfo.GetFixedWidthAttribute();
-                    var str = line.Substring(attribute.From, attribute.Length);
                     
-                    if (attribute.Converter != null)
-                    {
-                        propertyInfo.SetValue(e, Utils.Convert(attribute.Converter, str), null);
-                    }
-                    else
-                    {
-                        propertyInfo.SetValue(e, Utils.ConvertWithConverter(ConverterMap.GetForType(propertyInfo.PropertyType), str), null);
-                    }
+                    var toConvert = line.Substring(attribute.From, attribute.Length);
+
+                    // choose the converter to convert
+                    var converter = Utils.CreateConverterFromType(attribute.Converter) 
+                                       ?? ConverterMap.GetForType(propertyInfo.PropertyType);
+
+                    propertyInfo.SetValue(e, Utils.ConvertWithConverter(converter, toConvert));
                 }
                 list.Add(e);
             }
